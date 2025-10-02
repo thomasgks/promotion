@@ -43,6 +43,8 @@ def apply_quotation_promotions(quotation_doc, method):
 			quotation_doc.flags.ignore_validate = True
 			quotation_doc.flags.ignore_on_update = True
 			quotation_doc.save()
+			quotation_doc.reload()
+   
 			
 			# Calculate total discount
 			for item in quotation_doc.items:
