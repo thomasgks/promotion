@@ -58,16 +58,16 @@ frappe.ui.form.on("Quotation", {
   },
 
   // Listen to changes in the existing coupon_code field
-  coupon_code: function (frm) {
-    // Auto-apply promotion when coupon code is entered
-    if (frm.doc.coupon_code && frm.doc.coupon_code.length > 0) {
-      // Add a small delay to prevent multiple calls
-      clearTimeout(frm.coupon_timeout);
-      frm.coupon_timeout = setTimeout(function () {
-        frm.trigger("apply_promotion_from_coupon");
-      }, 1000); // 1 second delay
-    }
-  },
+  // coupon_code: function (frm) {
+  //   // Auto-apply promotion when coupon code is entered
+  //   if (frm.doc.coupon_code && frm.doc.coupon_code.length > 0) {
+  //     // Add a small delay to prevent multiple calls
+  //     clearTimeout(frm.coupon_timeout);
+  //     frm.coupon_timeout = setTimeout(function () {
+  //       frm.trigger("apply_promotion_from_coupon");
+  //     }, 1000); // 1 second delay
+  //   }
+  // },
   apply_promotion_from_coupon: function (frm) {
     if (!frm.doc.coupon_code) {
       frappe.msgprint(__("Please enter a coupon code first"));

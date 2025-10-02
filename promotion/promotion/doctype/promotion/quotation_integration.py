@@ -18,7 +18,7 @@ def validate_quotation_promotions(quotation_doc, method):
 	
 	# Check if promotion is being applied
 	#if hasattr(quotation_doc, 'apply_promotion') and quotation_doc.apply_promotion:
-	if not quotation_doc.coupon_code:
+	if  quotation_doc.coupon_code:
 		apply_quotation_promotions(quotation_doc, method)
 
 
@@ -39,6 +39,9 @@ def apply_quotation_promotions(quotation_doc, method):
 		if promotion_doc.apply_promotion(quotation_doc):
 			applied_promotions.append(promotion_doc.title)
 			quotation_doc.calculate_taxes_and_totals()
+			quotation_doc.flags.ignore_validate = True
+			quotation_doc.flags.ignore_on_update = True
+			quotation_doc.save()
 			
 			# Calculate total discount
 			for item in quotation_doc.items:
