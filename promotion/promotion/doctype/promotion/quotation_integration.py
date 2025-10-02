@@ -21,11 +21,13 @@ def validate_quotation_promotions(quotation_doc, method):
 	#Update 1
 	if  quotation_doc.coupon_code and not quotation_doc.promotion_applied:
 		apply_quotation_promotions(quotation_doc, method)
+	if  not quotation_doc.coupon_code and  quotation_doc.promotion_applied:
+		remove_quotation_promotions(quotation_doc, method)
 
 
 def apply_quotation_promotions(quotation_doc, method):
 	"""Apply promotions to quotation"""
-	if quotation_doc.docstatus != 0:  # Only for draft documents
+	if quotation_doc.docstatus != 0 or quotation_doc.promotion_applied:  # Only for draft documents
 		return
 	
 	# Get available promotions
@@ -44,7 +46,7 @@ def apply_quotation_promotions(quotation_doc, method):
 			quotation_doc.flags.ignore_version = True
 			quotation_doc.promotion_applied = 1
 			quotation_doc.calculate_taxes_and_totals()
-
+			#frappe.msgprint("DONE!")
 			
    
 			
@@ -71,8 +73,8 @@ def apply_quotation_promotions(quotation_doc, method):
 
 def remove_quotation_promotions(quotation_doc, method):
 	"""Remove promotions from quotation"""
-	if quotation_doc.docstatus != 1:  # Only for submitted documents
-		return
+	# if quotation_doc.docstatus != 1:  # Only for submitted documents
+	# 	return
 	
 	# Reset promotion fields
 	quotation_doc.promotion_applied = 0
@@ -81,8 +83,17 @@ def remove_quotation_promotions(quotation_doc, method):
 	
 	# Remove promotion discounts from items
 	for item in quotation_doc.items:
+		item.discount_percentage=0
+		item.discount_amount=0
+		quotation_doc.flags.ignore_validate = True
+		quotation_doc.flags.ignore_on_update = True
+		quotation_doc.flags.ignore_version = True
+		quotation_doc.promotion_applied = 0
+		quotation_doc.calculate_taxes_and_totals()
+  
 		if hasattr(item, 'promotion_discount'):
 			item.promotion_discount = 0
+   
 
 
 def get_available_promotions_for_quotation(quotation_doc):
