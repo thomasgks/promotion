@@ -1,0 +1,53 @@
+/* Copyright (c) 2024, Your Company and contributors
+For license information, please see license.txt */
+
+.promotion-summary {
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 15px;
+  margin: 10px 0;
+}
+
+.promotion-summary h4 {
+  color: #495057;
+  margin-bottom: 10px;
+}
+
+.promotion-discount {
+  color: #28a745;
+  font-weight: bold;
+}
+
+.promotion-applied {
+  color: #007bff;
+  font-weight: bold;
+}
+
+.promotion-item-discount {
+  background-color: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 3px;
+  padding: 5px;
+  margin: 2px 0;
+}
+
+.promotion-dialog .form-group {
+  margin-bottom: 15px;
+}
+
+.promotion-dialog .checkbox {
+  margin-bottom: 10px;
+}
+
+.promotion-dialog .checkbox label {
+  font-weight: normal;
+}
+
+.promotion-buttons {
+  margin-top: 20px;
+}
+
+.promotion-buttons .btn {
+  margin-right: 10px;
+}

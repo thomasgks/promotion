@@ -1,0 +1,122 @@
+{
+ "actions": [],
+ "autoname": "autoincrement",
+ "creation": "2024-01-01 00:00:00",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "reward_type",
+  "column_break_2",
+  "reward_item",
+  "target_brand",
+  "target_item",
+  "section_break_6",
+  "reward_qty",
+  "discount_percentage",
+  "discount_amount",
+  "bundle_size_override",
+  "section_break_11",
+  "unit_pick_strategy",
+  "proration_method"
+ ],
+ "fields": [
+  {
+   "fieldname": "reward_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Reward Type",
+   "options": "Discount %\nDiscount Amount\nBundle Price (Fixed)\nFree Item",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reward_item",
+   "fieldtype": "Link",
+   "label": "Reward Item / Target Item",
+   "options": "Item"
+  },
+  {
+   "fieldname": "target_brand",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Target Brand",
+   "options": "Brand"
+  },
+  {
+   "fieldname": "target_item",
+   "fieldtype": "Link",
+   "label": "Target Item",
+   "options": "Item"
+  },
+  {
+   "fieldname": "section_break_6",
+   "fieldtype": "Section Break",
+   "label": "Reward Details"
+  },
+  {
+   "default": "1",
+   "fieldname": "reward_qty",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "label": "Reward Qty"
+  },
+  {
+   "default": "0",
+   "fieldname": "discount_percentage",
+   "fieldtype": "Percent",
+   "in_list_view": 1,
+   "label": "Discount %"
+  },
+  {
+   "default": "0",
+   "fieldname": "discount_amount",
+   "fieldtype": "Currency",
+   "label": "Discount Amount"
+  },
+  {
+   "default": "0",
+   "fieldname": "bundle_size_override",
+   "fieldtype": "Int",
+   "label": "Bundle Size (override)"
+  },
+  {
+   "fieldname": "section_break_11",
+   "fieldtype": "Section Break",
+   "label": "Strategy"
+  },
+  {
+   "default": "Document Order",
+   "fieldname": "unit_pick_strategy",
+   "fieldtype": "Select",
+   "label": "Unit Pick Strategy",
+   "options": "Document Order\nPrice (Low to High)\nPrice (High to Low)\nRandom"
+  },
+  {
+   "default": "Proportional",
+   "fieldname": "proration_method",
+   "fieldtype": "Select",
+   "label": "Proration Method",
+   "options": "Proportional\nEqual\nFirst Item"
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-10-01 21:08:06.447696",
+ "modified_by": "Administrator",
+ "module": "Promotion",
+ "name": "Promotion Action",
+ "naming_rule": "Autoincrement",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}
