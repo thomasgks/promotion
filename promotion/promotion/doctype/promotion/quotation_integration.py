@@ -38,6 +38,7 @@ def apply_quotation_promotions(quotation_doc, method):
 		
 		if promotion_doc.apply_promotion(quotation_doc):
 			applied_promotions.append(promotion_doc.title)
+			quotation_doc.calculate_taxes_and_totals()
 			
 			# Calculate total discount
 			for item in quotation_doc.items:
