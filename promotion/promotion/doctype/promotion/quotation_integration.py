@@ -39,11 +39,12 @@ def apply_quotation_promotions(quotation_doc, method):
 		
 		if promotion_doc.apply_promotion(quotation_doc):
 			applied_promotions.append(promotion_doc.title)
-			quotation_doc.calculate_taxes_and_totals()
 			quotation_doc.flags.ignore_validate = True
 			quotation_doc.flags.ignore_on_update = True
-			quotation_doc.save()
-			quotation_doc.reload()
+			quotation_doc.flags.ignore_version = True
+			quotation_doc.calculate_taxes_and_totals()
+
+			
    
 			
 			# Calculate total discount
