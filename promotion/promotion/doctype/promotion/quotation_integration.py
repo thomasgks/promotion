@@ -117,7 +117,7 @@ def apply_promotion_to_quotation(quotation_name, promotion_name):
 			quotation_doc.flags.ignore_validate = True
 			quotation_doc.flags.ignore_on_update = True
 			quotation_doc.save()
-			frappe.msgprint(_("Promotion '{0}' applied successfully").format(promotion_doc.title))
+			#frappe.msgprint(_("Promotion '{0}' applied successfully").format(promotion_doc.title))
 			return True
 		else:
 			frappe.msgprint(_("Promotion conditions not met"))

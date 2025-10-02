@@ -126,7 +126,7 @@ class Promotion(Document):
 		# Check conditions
 		if not self.check_quantity_condition(applicable_items) and not self.check_amount_condition(applicable_items):
 			return False
-		frappe.msgprint(_("Promotion applied: {0} items discounted").format(self.name))
+		#frappe.msgprint(_("Promotion applied: {0} items discounted").format(self.name))
 		# Apply actions
 		applied = False
 		for action in self.actions:
@@ -172,9 +172,9 @@ class Promotion(Document):
 			# Apply discount to reward quantity only
 			discount_qty = flt(action.reward_qty)
 		
-		frappe.msgprint(_("Total applicable qty: {0}, Min qty: {1}, Discount qty: {2}").format(
-			sum(flt(item.qty) for item in applicable_items), self.min_qty, discount_qty
-		))
+		#frappe.msgprint(_("Total applicable qty: {0}, Min qty: {1}, Discount qty: {2}").format(
+		#	sum(flt(item.qty) for item in applicable_items), self.min_qty, discount_qty
+		#))
 		
 		# Apply discount to target items - only to the number that should be free
 		for item in quotation_doc.items:
@@ -212,14 +212,14 @@ class Promotion(Document):
 					items_discounted += item_qty_to_discount
 					discount_applied = True
 					
-					frappe.msgprint(_("Applied {0}% discount to {1} qty of item {2}. Discount amount: {3}, New amount: {4}").format(
-						discount_percentage, item_qty_to_discount, item.item_code, discount_amount, item.amount
-					))
+					#frappe.msgprint(_("Applied {0}% discount to {1} qty of item {2}. Discount amount: {3}, New amount: {4}").format(
+					#	discount_percentage, item_qty_to_discount, item.item_code, discount_amount, item.amount
+					#))
 		
-		if discount_applied:
-			frappe.msgprint(_("Promotion applied: {0} items discounted").format(items_discounted))
-		else:
-			frappe.msgprint(_("No items qualified for discount"))
+		# if discount_applied:
+		# 	frappe.msgprint(_("Promotion applied: {0} items discounted").format(items_discounted))
+		# else:
+		# 	frappe.msgprint(_("No items qualified for discount"))
 		
 		return discount_applied
 
@@ -247,9 +247,9 @@ class Promotion(Document):
 			# Apply discount to reward quantity only
 			discount_qty = flt(action.reward_qty)
 		
-		frappe.msgprint(_("Total applicable qty: {0}, Min qty: {1}, Discount qty: {2}").format(
-			sum(flt(item.qty) for item in applicable_items), self.min_qty, discount_qty
-		))
+		#frappe.msgprint(_("Total applicable qty: {0}, Min qty: {1}, Discount qty: {2}").format(
+		#	sum(flt(item.qty) for item in applicable_items), self.min_qty, discount_qty
+		#))
 		
 		# Apply discount to target items - only to the number that should be free
 		for item in quotation_doc.items:
@@ -285,14 +285,14 @@ class Promotion(Document):
 					items_discounted += item_qty_to_discount
 					discount_applied = True
 					
-					frappe.msgprint(_("Applied {0} discount to {1} qty of item {2}. Discount amount: {3}, New amount: {4}").format(
-						action.discount_amount, item_qty_to_discount, item.item_code, discount_amount, item.amount
-					))
+					#frappe.msgprint(_("Applied {0} discount to {1} qty of item {2}. Discount amount: {3}, New amount: {4}").format(
+					#	action.discount_amount, item_qty_to_discount, item.item_code, discount_amount, item.amount
+					#))
 		
-		if discount_applied:
-			frappe.msgprint(_("Promotion applied: {0} items discounted").format(items_discounted))
-		else:
-			frappe.msgprint(_("No items qualified for discount"))
+		# if discount_applied:
+		# 	frappe.msgprint(_("Promotion applied: {0} items discounted").format(items_discounted))
+		# else:
+		# 	frappe.msgprint(_("No items qualified for discount"))
 		
 		return discount_applied
 
