@@ -17,7 +17,8 @@ def validate_quotation_promotions(quotation_doc, method):
 		return
 	
 	# Check if promotion is being applied
-	if hasattr(quotation_doc, 'apply_promotion') and quotation_doc.apply_promotion:
+	#if hasattr(quotation_doc, 'apply_promotion') and quotation_doc.apply_promotion:
+	if not quotation_doc.coupon_code:
 		apply_quotation_promotions(quotation_doc, method)
 
 
