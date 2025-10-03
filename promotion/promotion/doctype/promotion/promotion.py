@@ -23,6 +23,12 @@ class Promotion(Document):
 
 		if self.based_on == "Brand" and not self.source_brands:
 			frappe.throw(_("Source Brands must be specified when Based On is Brand"))
+		
+		if self.based_on == "Item Group" and not self.source_item_groups:
+			frappe.throw(_("Source Item Groups must be specified when Based On is Item Group"))
+		
+		if self.based_on == "Item Group + Brand" and not self.source_item_groups:
+			frappe.throw(_("Source Item Groups must be specified when Based On is Item Group + Brand"))
 
 	def validate_actions(self):
 		if not self.actions:
@@ -62,6 +68,9 @@ class Promotion(Document):
 			elif self.based_on == "Item Group":
 				if self.is_item_group_match(item):
 					applicable_items.append(item)
+			elif self.based_on == "Item Group + Brand":
+				if self.is_item_group_brand_match(item):
+					applicable_items.append(item)
 			elif self.based_on == "Item":
 				if self.is_item_match(item):
 					applicable_items.append(item)
@@ -84,8 +93,55 @@ class Promotion(Document):
 		return False
 
 	def is_item_group_match(self, item):
-		"""Check if item group matches (to be implemented based on requirements)"""
-		# This would need to be implemented based on specific item group logic
+		"""Check if item group matches source item groups (without brand requirement)"""
+		if not self.source_item_groups:
+			return False
+		
+		item_group = frappe.db.get_value("Item", item.item_code, "item_group")
+		if not item_group:
+			return False
+		
+		for source_item_group in self.source_item_groups:
+			if source_item_group.item_group == item_group:
+				# Special case: If brand is null/empty, work even if enabled is False
+				# This allows "all brands in group" rules to work without enabling
+				if not source_item_group.brand:
+					return True
+				
+				# For specific brand rules, check if enabled
+				is_enabled = getattr(source_item_group, 'enabled', True)
+				if not is_enabled:
+					continue
+				
+				# Brand is specified, it must match
+				item_brand = frappe.db.get_value("Item", item.item_code, "brand")
+				if item_brand == source_item_group.brand:
+					return True
+		
+		return False
+
+	def is_item_group_brand_match(self, item):
+		"""Check if item group and brand combination matches source item groups"""
+		if not self.source_item_groups:
+			return False
+		
+		item_group = frappe.db.get_value("Item", item.item_code, "item_group")
+		item_brand = frappe.db.get_value("Item", item.item_code, "brand")
+		
+		if not item_group or not item_brand:
+			return False
+		
+		for source_item_group in self.source_item_groups:
+			# Check if this rule is enabled (default to True if not specified)
+			is_enabled = getattr(source_item_group, 'enabled', True)
+			if not is_enabled:
+				continue
+			
+			# Both item group and brand must match
+			if (source_item_group.item_group == item_group and 
+				source_item_group.brand == item_brand):
+				return True
+		
 		return False
 
 	def is_item_match(self, item):
@@ -541,9 +597,12 @@ def apply_coupon_code(coupon_code, quotation_name):
 				WHERE name = %s
 			""", (coupon.name))
 			
+			# Set promotion applied flag and coupon code
+			quotation_doc.promotion_applied = 1
+			quotation_doc.coupon_code = coupon.name
+			
 			# Save quotation
 			quotation_doc.calculate_taxes_and_totals()
-			quotation_doc.coupon_code=coupon.name
 			quotation_doc.flags.ignore_validate = True
 			quotation_doc.flags.ignore_on_update = True
 			quotation_doc.save()
@@ -561,3 +620,43 @@ def apply_coupon_code(coupon_code, quotation_name):
 			
 	except Exception as e:
 		frappe.throw(_("Error applying coupon code: {0}").format(str(e)))
+
+
+@frappe.whitelist()
+def remove_coupon_promotion(quotation_name):
+	"""Remove coupon promotion from quotation when coupon code is cleared"""
+	try:
+		quotation_doc = frappe.get_doc("Quotation", quotation_name)
+		
+		# Reset promotion-related fields
+		quotation_doc.promotion_applied = 0
+		quotation_doc.coupon_code = ""
+		
+		# Remove discounts from all items
+		for item in quotation_doc.items:
+			# Reset discount fields
+			item.discount_percentage = 0
+			item.discount_amount = 0
+			
+			# Recalculate item amount based on original rate
+			item.amount = flt(item.rate) * flt(item.qty)
+			
+			# Remove any promotion-specific fields if they exist
+			if hasattr(item, 'promotion_discount'):
+				item.promotion_discount = 0
+		
+		# Recalculate taxes and totals
+		quotation_doc.calculate_taxes_and_totals()
+		
+		# Save the document
+		quotation_doc.flags.ignore_validate = True
+		quotation_doc.flags.ignore_on_update = True
+		quotation_doc.save()
+		
+		return {
+			"success": True,
+			"message": "Promotion removed successfully"
+		}
+		
+	except Exception as e:
+		frappe.throw(_("Error removing coupon promotion: {0}").format(str(e)))

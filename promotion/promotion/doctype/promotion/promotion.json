@@ -1,160 +1,167 @@
 {
- "actions": [],
- "allow_rename": 1,
- "autoname": "naming_series:",
- "creation": "2025-10-01 16:01:04.071638",
- "doctype": "DocType",
- "engine": "InnoDB",
- "field_order": [
-  "naming_series",
-  "column_break_vdzg",
-  "title",
-  "disabled",
-  "general_section",
-  "company",
-  "valid_from",
-  "valid_upto",
-  "promotion_behavior_section",
-  "apply_once_per_document",
-  "multiply_by_min_qty",
-  "based_on",
-  "source_filters_section",
-  "source_brands",
-  "conditions_section",
-  "min_qty",
-  "min_amount",
-  "actions_section",
-  "actions"
- ],
- "fields": [
-  {
-   "fieldname": "naming_series",
-   "fieldtype": "Select",
-   "label": "Naming Series",
-   "options": "PROM-.YYYY.-"
-  },
-  {
-   "fieldname": "column_break_vdzg",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "title",
-   "fieldtype": "Data",
-   "label": "Title"
-  },
-  {
-   "default": "0",
-   "fieldname": "disabled",
-   "fieldtype": "Check",
-   "label": "Disabled"
-  },
-  {
-   "fieldname": "general_section",
-   "fieldtype": "Section Break",
-   "label": "General"
-  },
-  {
-   "fieldname": "company",
-   "fieldtype": "Link",
-   "label": "Company",
-   "options": "Company"
-  },
-  {
-   "fieldname": "valid_from",
-   "fieldtype": "Date",
-   "label": "Valid From"
-  },
-  {
-   "fieldname": "valid_upto",
-   "fieldtype": "Date",
-   "label": "Valid Upto"
-  },
-  {
-   "fieldname": "promotion_behavior_section",
-   "fieldtype": "Section Break",
-   "label": "Promotion Behavior"
-  },
-  {
-   "default": "0",
-   "fieldname": "apply_once_per_document",
-   "fieldtype": "Check",
-   "label": "Apply Once Per Document"
-  },
-  {
-   "default": "0",
-   "fieldname": "multiply_by_min_qty",
-   "fieldtype": "Check",
-   "label": "Multiply by Min Qty"
-  },
-  {
-   "fieldname": "based_on",
-   "fieldtype": "Select",
-   "label": "Based On",
-   "options": "Brand\nItem Group\nItem"
-  },
-  {
-   "fieldname": "source_filters_section",
-   "fieldtype": "Section Break",
-   "label": "Source Filters"
-  },
-  {
-   "fieldname": "source_brands",
-   "fieldtype": "Table",
-   "label": "Source Brands",
-   "options": "Promotion Source Brand"
-  },
-  {
-   "fieldname": "conditions_section",
-   "fieldtype": "Section Break",
-   "label": "Conditions"
-  },
-  {
-   "fieldname": "min_qty",
-   "fieldtype": "Float",
-   "label": "Min Qty"
-  },
-  {
-   "fieldname": "min_amount",
-   "fieldtype": "Currency",
-   "label": "Min Amount"
-  },
-  {
-   "fieldname": "actions_section",
-   "fieldtype": "Section Break",
-   "label": "Actions"
-  },
-  {
-   "fieldname": "actions",
-   "fieldtype": "Table",
-   "label": "Actions",
-   "options": "Promotion Action"
-  }
- ],
- "grid_page_length": 50,
- "index_web_pages_for_search": 1,
- "links": [],
- "modified": "2025-10-01 17:05:10.960082",
- "modified_by": "Administrator",
- "module": "Promotion",
- "name": "Promotion",
- "naming_rule": "By \"Naming Series\" field",
- "owner": "Administrator",
- "permissions": [
-  {
-   "create": 1,
-   "delete": 1,
-   "email": 1,
-   "export": 1,
-   "print": 1,
-   "read": 1,
-   "report": 1,
-   "role": "System Manager",
-   "share": 1,
-   "write": 1
-  }
- ],
- "row_format": "Dynamic",
- "sort_field": "modified",
- "sort_order": "DESC",
- "states": []
+  "actions": [],
+  "allow_rename": 1,
+  "autoname": "naming_series:",
+  "creation": "2025-10-01 16:01:04.071638",
+  "doctype": "DocType",
+  "engine": "InnoDB",
+  "field_order": [
+    "naming_series",
+    "column_break_vdzg",
+    "title",
+    "disabled",
+    "general_section",
+    "company",
+    "valid_from",
+    "valid_upto",
+    "promotion_behavior_section",
+    "apply_once_per_document",
+    "multiply_by_min_qty",
+    "based_on",
+    "source_filters_section",
+    "source_brands",
+    "source_item_groups",
+    "conditions_section",
+    "min_qty",
+    "min_amount",
+    "actions_section",
+    "actions"
+  ],
+  "fields": [
+    {
+      "fieldname": "naming_series",
+      "fieldtype": "Select",
+      "label": "Naming Series",
+      "options": "PROM-.YYYY.-"
+    },
+    {
+      "fieldname": "column_break_vdzg",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "title",
+      "fieldtype": "Data",
+      "label": "Title"
+    },
+    {
+      "default": "0",
+      "fieldname": "disabled",
+      "fieldtype": "Check",
+      "label": "Disabled"
+    },
+    {
+      "fieldname": "general_section",
+      "fieldtype": "Section Break",
+      "label": "General"
+    },
+    {
+      "fieldname": "company",
+      "fieldtype": "Link",
+      "label": "Company",
+      "options": "Company"
+    },
+    {
+      "fieldname": "valid_from",
+      "fieldtype": "Date",
+      "label": "Valid From"
+    },
+    {
+      "fieldname": "valid_upto",
+      "fieldtype": "Date",
+      "label": "Valid Upto"
+    },
+    {
+      "fieldname": "promotion_behavior_section",
+      "fieldtype": "Section Break",
+      "label": "Promotion Behavior"
+    },
+    {
+      "default": "0",
+      "fieldname": "apply_once_per_document",
+      "fieldtype": "Check",
+      "label": "Apply Once Per Document"
+    },
+    {
+      "default": "0",
+      "fieldname": "multiply_by_min_qty",
+      "fieldtype": "Check",
+      "label": "Multiply by Min Qty"
+    },
+    {
+      "fieldname": "based_on",
+      "fieldtype": "Select",
+      "label": "Based On",
+      "options": "Brand\nItem Group\nItem Group + Brand\nItem"
+    },
+    {
+      "fieldname": "source_filters_section",
+      "fieldtype": "Section Break",
+      "label": "Source Filters"
+    },
+    {
+      "fieldname": "source_brands",
+      "fieldtype": "Table",
+      "label": "Source Brands",
+      "options": "Promotion Source Brand"
+    },
+    {
+      "fieldname": "source_item_groups",
+      "fieldtype": "Table",
+      "label": "Source Item Groups",
+      "options": "Promotion Source Item Group"
+    },
+    {
+      "fieldname": "conditions_section",
+      "fieldtype": "Section Break",
+      "label": "Conditions"
+    },
+    {
+      "fieldname": "min_qty",
+      "fieldtype": "Float",
+      "label": "Min Qty"
+    },
+    {
+      "fieldname": "min_amount",
+      "fieldtype": "Currency",
+      "label": "Min Amount"
+    },
+    {
+      "fieldname": "actions_section",
+      "fieldtype": "Section Break",
+      "label": "Actions"
+    },
+    {
+      "fieldname": "actions",
+      "fieldtype": "Table",
+      "label": "Actions",
+      "options": "Promotion Action"
+    }
+  ],
+  "grid_page_length": 50,
+  "index_web_pages_for_search": 1,
+  "links": [],
+  "modified": "2025-10-01 17:05:10.960082",
+  "modified_by": "Administrator",
+  "module": "Promotion",
+  "name": "Promotion",
+  "naming_rule": "By \"Naming Series\" field",
+  "owner": "Administrator",
+  "permissions": [
+    {
+      "create": 1,
+      "delete": 1,
+      "email": 1,
+      "export": 1,
+      "print": 1,
+      "read": 1,
+      "report": 1,
+      "role": "System Manager",
+      "share": 1,
+      "write": 1
+    }
+  ],
+  "row_format": "Dynamic",
+  "sort_field": "modified",
+  "sort_order": "DESC",
+  "states": []
 }

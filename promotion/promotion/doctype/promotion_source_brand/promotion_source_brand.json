@@ -19,7 +19,6 @@
    "in_list_view": 1,
    "label": "Brand",
    "options": "Brand",
-   "reqd": 1,
    "unique": 1
   },
   {
@@ -36,7 +35,7 @@
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-10-01 16:08:12.052305",
+ "modified": "2025-10-02 22:57:23.483869",
  "modified_by": "Administrator",
  "module": "Promotion",
  "name": "Promotion Source Brand",
