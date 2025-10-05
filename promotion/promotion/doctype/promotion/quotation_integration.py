@@ -26,13 +26,13 @@ def validate_quotation_promotions(quotation_doc, method):
 	elif quotation_doc.coupon_code and quotation_doc.promotion_applied:
 		# Check if the current coupon code matches the applied promotion
 		# If different, remove old and apply new
-		current_coupon = frappe.db.get_value("Coupon Code", {"coupon_code": quotation_doc.coupon_code}, "name")
-		if current_coupon and hasattr(quotation_doc, '_doc_before_save'):
-			old_coupon_code = quotation_doc._doc_before_save.get('coupon_code', '')
-			if old_coupon_code != quotation_doc.coupon_code:
-				# Coupon code changed - remove old promotion and apply new
-				remove_quotation_promotions(quotation_doc, method)
-				apply_quotation_promotions(quotation_doc, method)
+		# current_coupon = frappe.db.get_value("Coupon Code", {"coupon_code": quotation_doc.coupon_code}, "name")
+		# if current_coupon and hasattr(quotation_doc, '_doc_before_save'):
+		# 	old_coupon_code = quotation_doc._doc_before_save.get('coupon_code', '')
+		# 	if old_coupon_code != quotation_doc.coupon_code:
+		# 		# Coupon code changed - remove old promotion and apply new
+		remove_quotation_promotions(quotation_doc, method)
+		apply_quotation_promotions(quotation_doc, method)
 
 
 def apply_quotation_promotions(quotation_doc, method):

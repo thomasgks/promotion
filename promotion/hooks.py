@@ -101,7 +101,8 @@ doc_events = {
 	"Quotation": {
 		"validate": "promotion.promotion.doctype.promotion.quotation_integration.validate_quotation_promotions",
 		"on_submit": "promotion.promotion.doctype.promotion.quotation_integration.apply_quotation_promotions",
-		"on_cancel": "promotion.promotion.doctype.promotion.quotation_integration.remove_quotation_promotions"
+		"on_cancel": "promotion.promotion.doctype.promotion.quotation_integration.remove_quotation_promotions",
+		"after_save": "promotion.promotion.doctype.promotion.quotation_integration.apply_quotation_promotions",
 	}
 }
 
