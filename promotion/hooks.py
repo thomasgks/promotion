@@ -43,6 +43,11 @@ doctype_js = {"Quotation" : "public/js/quotation.js"}
 # role_home_page = {
 #	"Role": "home_page"
 # }
+fixtures = [
+    {"doctype": "Custom Field", "filters": [["module", "=", "Promotion"]]},
+    {"doctype": "Property Setter", "filters": [["module", "=", "Promotion"]]}
+]
+
 
 # Generators
 # ----------
