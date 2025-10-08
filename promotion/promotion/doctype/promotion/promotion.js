@@ -13,14 +13,38 @@ frappe.ui.form.on("Promotion", {
         __("Actions")
       );
     }
+    
+    // Initialize field visibility based on based_on selection
+    frm.trigger("based_on");
+    
+    // Override the default Link field behavior for item_group in tables
+    if (frm.fields_dict.source_item_groups && frm.fields_dict.source_item_groups.grid) {
+      frm.fields_dict.source_item_groups.grid.wrapper.find('.link-field[data-fieldname="item_group"]').each(function() {
+        $(this).on('focus', function() {
+          // Clear any auto-selected value when focusing on the field
+          let $input = $(this).find('input');
+          if ($input.val() && $input.val() !== '') {
+            // Don't clear if user has already selected something
+            return;
+          }
+        });
+      });
+    }
   },
 
   based_on: function (frm) {
     // Show/hide relevant fields based on selection
     if (frm.doc.based_on === "Brand") {
       frm.set_df_property("source_brands", "hidden", 0);
+      frm.set_df_property("source_item_groups", "hidden", 1);
+    } else if (frm.doc.based_on === "Item Group" || 
+               frm.doc.based_on === "Item Group + Brand" || 
+               frm.doc.based_on === "Item Group + Brand + Vendor Code + Season") {
+      frm.set_df_property("source_brands", "hidden", 1);
+      frm.set_df_property("source_item_groups", "hidden", 0);
     } else {
       frm.set_df_property("source_brands", "hidden", 1);
+      frm.set_df_property("source_item_groups", "hidden", 1);
     }
   },
 
@@ -109,4 +133,36 @@ frappe.ui.form.on("Promotion Source Brand", {
     // Auto-enable when brand is selected
     frappe.model.set_value(cdt, cdn, "enabled", 1);
   },
+});
+
+frappe.ui.form.on("Promotion Source Item Group", {
+  item_group: function (frm, cdt, cdn) {
+    // Auto-enable when item group is selected
+    let row = locals[cdt][cdn];
+    if (row.item_group) {
+      frappe.model.set_value(cdt, cdn, "enabled", 1);
+    }
+  },
+  
+  brand: function (frm, cdt, cdn) {
+    // Auto-enable when brand is selected
+    frappe.model.set_value(cdt, cdn, "enabled", 1);
+  },
+  
+  // Handle when a new row is added
+  before_insert: function (frm, cdt, cdn) {
+    // Ensure the row starts with enabled = 1 by default
+    frappe.model.set_value(cdt, cdn, "enabled", 1);
+  }
+});
+
+// Additional handler to prevent auto-selection
+frappe.ui.form.on("Promotion", {
+  source_item_groups_add: function (frm, cdt, cdn) {
+    // Clear any auto-selected values when adding a new row
+    setTimeout(() => {
+      frappe.model.set_value(cdt, cdn, "item_group", "");
+      frappe.model.set_value(cdt, cdn, "enabled", 1);
+    }, 100);
+  }
 });

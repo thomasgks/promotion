@@ -6,21 +6,22 @@
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
- "field_order": [
-  "reward_type",
-  "column_break_2",
-  "reward_item",
-  "target_brand",
-  "target_item",
-  "section_break_6",
-  "reward_qty",
-  "discount_percentage",
-  "discount_amount",
-  "bundle_size_override",
-  "section_break_11",
-  "unit_pick_strategy",
-  "proration_method"
- ],
+  "field_order": [
+   "reward_type",
+   "column_break_2",
+   "reward_item",
+   "reward_item_group",
+   "reward_brand",
+   "target_brand",
+   "target_item",
+   "section_break_6",
+   "discount_percentage",
+   "discount_amount",
+   "bundle_size_override",
+   "section_break_11",
+   "unit_pick_strategy",
+   "proration_method"
+  ],
  "fields": [
   {
    "fieldname": "reward_type",
@@ -37,8 +38,22 @@
   {
    "fieldname": "reward_item",
    "fieldtype": "Link",
-   "label": "Reward Item / Target Item",
+   "label": "Specific Reward Item (Optional)",
    "options": "Item"
+  },
+  {
+   "fieldname": "reward_item_group",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Reward Item Group",
+   "options": "Item Group"
+  },
+  {
+   "fieldname": "reward_brand",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Reward Brand",
+   "options": "Brand"
   },
   {
    "fieldname": "target_brand",
@@ -57,13 +72,6 @@
    "fieldname": "section_break_6",
    "fieldtype": "Section Break",
    "label": "Reward Details"
-  },
-  {
-   "default": "1",
-   "fieldname": "reward_qty",
-   "fieldtype": "Float",
-   "in_list_view": 1,
-   "label": "Reward Qty"
   },
   {
    "default": "0",

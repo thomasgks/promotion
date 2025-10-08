@@ -1,7 +1,6 @@
 {
   "actions": [],
   "allow_rename": 1,
-  "autoname": "field:item_group",
   "creation": "2024-01-01 00:00:00",
   "default_view": "List",
   "doctype": "DocType",
@@ -12,6 +11,9 @@
     "column_break_2",
     "brand",
     "column_break_3",
+    "custom_vendor_code",
+    "column_break_4",
+    "season_attribute",
     "enabled"
   ],
   "fields": [
@@ -21,7 +23,7 @@
       "in_list_view": 1,
       "label": "Item Group",
       "options": "Item Group",
-      "reqd": 1
+      "description": "Leave empty to include all item groups"
     },
     {
       "fieldname": "column_break_2",
@@ -32,11 +34,28 @@
       "fieldtype": "Link",
       "in_list_view": 1,
       "label": "Brand",
-      "options": "Brand"
+      "options": "Brand",
+      "description": "Leave empty to include all brands"
     },
     {
       "fieldname": "column_break_3",
       "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "custom_vendor_code",
+      "fieldtype": "Data",
+      "label": "Vendor Code",
+      "description": "Leave empty to include all vendor codes"
+    },
+    {
+      "fieldname": "column_break_4",
+      "fieldtype": "Column Break"
+    },
+    {
+      "fieldname": "season_attribute",
+      "fieldtype": "Data",
+      "label": "Season",
+      "description": "Leave empty to include all seasons"
     },
     {
       "default": "1",
@@ -52,7 +71,7 @@
   "modified_by": "Administrator",
   "module": "Promotion",
   "name": "Promotion Source Item Group",
-  "naming_rule": "By fieldname",
+  "naming_rule": "Autoincrement",
   "owner": "Administrator",
   "permissions": [],
   "row_format": "Dynamic",

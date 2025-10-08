@@ -171,7 +171,7 @@ frappe.ui.form.on("Quotation", {
       primary_action: function (values) {
         frappe.call({
           method:
-            "promotion.promotion.doctype.promotion.quotation_integration.validate_coupon_code",
+            "promotion.promotion.doctype.promotion.promotion.validate_coupon_code",
           args: {
             coupon_code: values.coupon_code,
             quotation_name: frm.doc.name,
@@ -190,6 +190,8 @@ frappe.ui.form.on("Quotation", {
                   __("Coupon code validation failed: {0}", [r.message.message])
                 );
               }
+            } else {
+              frappe.msgprint(__("Error validating coupon code"));
             }
           },
         });
@@ -208,6 +210,12 @@ frappe.ui.form.on("Quotation", {
       frm.coupon_timeout = setTimeout(function () {
         frm.trigger("apply_promotion_from_coupon");
       }, 1000); // 1 second delay
+    } else if (!frm.doc.coupon_code && frm.doc.promotion_applied) {
+      // Remove promotion when coupon code is cleared
+      clearTimeout(frm.coupon_timeout);
+      frm.coupon_timeout = setTimeout(function () {
+        frm.trigger("remove_promotion_from_coupon");
+      }, 500); // 0.5 second delay
     }
   },
 
@@ -247,9 +255,45 @@ frappe.ui.form.on("Quotation", {
             }
 
             // Reload the document to show updated amounts
-            frm.reload_doc();
+            setTimeout(function() {
+              frm.reload_doc();
+            }, 500);
           } else {
             frappe.msgprint(__("Promotion error: {0}", [r.message.message]));
+          }
+        } else {
+          frappe.msgprint(__("Error applying promotion"));
+        }
+      },
+    });
+  },
+
+  remove_promotion_from_coupon: function (frm) {
+    // Show loading
+    frappe.show_alert({
+      message: __("Removing promotion..."),
+      indicator: "blue",
+    });
+
+    // Remove promotion using the coupon removal method
+    frappe.call({
+      method:
+        "promotion.promotion.doctype.promotion.promotion.remove_coupon_promotion",
+      args: {
+        quotation_name: frm.doc.name,
+      },
+      callback: function (r) {
+        if (r.message) {
+          if (r.message.success) {
+            frappe.show_alert({
+              message: __("Promotion removed successfully!"),
+              indicator: "green",
+            });
+
+            // Reload the document to show updated amounts
+            frm.reload_doc();
+          } else {
+            frappe.msgprint(__("Error removing promotion: {0}", [r.message.message]));
           }
         }
       },

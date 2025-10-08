@@ -23,6 +23,7 @@
     "source_item_groups",
     "conditions_section",
     "min_qty",
+    "reward_qty",
     "min_amount",
     "actions_section",
     "actions"
@@ -91,7 +92,7 @@
       "fieldname": "based_on",
       "fieldtype": "Select",
       "label": "Based On",
-      "options": "Brand\nItem Group\nItem Group + Brand\nItem"
+      "options": "Brand\nItem Group\nItem Group + Brand\nItem Group + Brand + Vendor Code + Season\nItem"
     },
     {
       "fieldname": "source_filters_section",
@@ -118,7 +119,13 @@
     {
       "fieldname": "min_qty",
       "fieldtype": "Float",
-      "label": "Min Qty"
+      "label": "Min Qty (Buy)"
+    },
+    {
+      "default": "1",
+      "fieldname": "reward_qty",
+      "fieldtype": "Float",
+      "label": "Reward Qty (Get)"
     },
     {
       "fieldname": "min_amount",
