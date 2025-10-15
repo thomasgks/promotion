@@ -1,0 +1,129 @@
+{
+  "custom_fields": {
+    "Promotion": [
+      {
+        "fieldname": "promotion_type",
+        "label": "Promotion Type",
+        "fieldtype": "Select",
+        "options": "Buy X Get Y\nBundle - Fixed Price\nBundle - Percentage\nCoupon - % with Cap",
+        "default": "Buy X Get Y",
+        "reqd": 1,
+        "insert_after": "title",
+        "description": "Select the type of promotion to apply"
+      },
+      {
+        "fieldname": "bundle_section",
+        "label": "Bundle Promotion Settings",
+        "fieldtype": "Section Break",
+        "depends_on": "eval:['Bundle - Fixed Price', 'Bundle - Percentage'].includes(doc.promotion_type)",
+        "insert_after": "promotion_type",
+        "collapsible": 0
+      },
+      {
+        "fieldname": "bundle_qty",
+        "label": "Bundle Qty",
+        "fieldtype": "Int",
+        "description": "Minimum number of items required in bundle",
+        "mandatory_depends_on": "eval:['Bundle - Fixed Price', 'Bundle - Percentage'].includes(doc.promotion_type)",
+        "insert_after": "bundle_section"
+      },
+      {
+        "fieldname": "bundle_condition_field",
+        "label": "Bundle Condition",
+        "fieldtype": "Select",
+        "options": "Vendor\nBrand\nItem Group",
+        "description": "Group items by this field for bundle calculation",
+        "default": "Brand",
+        "depends_on": "eval:['Bundle - Fixed Price', 'Bundle - Percentage'].includes(doc.promotion_type)",
+        "insert_after": "bundle_qty"
+      },
+      {
+        "fieldname": "bundle_column_break_1",
+        "fieldtype": "Column Break",
+        "insert_after": "bundle_condition_field"
+      },
+      {
+        "fieldname": "apply_to_cheapest_only",
+        "label": "Apply to Cheapest Items Only",
+        "fieldtype": "Check",
+        "description": "If checked, apply discount only to cheapest N items. Otherwise apply to all matching items.",
+        "default": 0,
+        "depends_on": "eval:doc.promotion_type == 'Bundle - Percentage'",
+        "insert_after": "bundle_column_break_1"
+      },
+      {
+        "fieldname": "fixed_price_section",
+        "label": "Fixed Price Settings",
+        "fieldtype": "Section Break",
+        "depends_on": "eval:doc.promotion_type == 'Bundle - Fixed Price'",
+        "insert_after": "apply_to_cheapest_only",
+        "collapsible": 0
+      },
+      {
+        "fieldname": "fixed_bundle_price",
+        "label": "Fixed Bundle Price",
+        "fieldtype": "Currency",
+        "description": "Total price for all items in bundle (e.g., Buy 3 for SAR 100)",
+        "mandatory_depends_on": "eval:doc.promotion_type == 'Bundle - Fixed Price'",
+        "insert_after": "fixed_price_section"
+      },
+      {
+        "fieldname": "percentage_section",
+        "label": "Percentage Discount Settings",
+        "fieldtype": "Section Break",
+        "depends_on": "eval:doc.promotion_type == 'Bundle - Percentage'",
+        "insert_after": "fixed_bundle_price",
+        "collapsible": 0
+      },
+      {
+        "fieldname": "bundle_discount_percentage",
+        "label": "Bundle Discount %",
+        "fieldtype": "Float",
+        "description": "Percentage discount on bundle (e.g., 15 for 15% off)",
+        "mandatory_depends_on": "eval:doc.promotion_type == 'Bundle - Percentage'",
+        "insert_after": "percentage_section"
+      },
+      {
+        "fieldname": "coupon_section",
+        "label": "Coupon Discount with Cap",
+        "fieldtype": "Section Break",
+        "depends_on": "eval:doc.promotion_type == 'Coupon - % with Cap'",
+        "insert_after": "bundle_discount_percentage",
+        "collapsible": 0
+      },
+      {
+        "fieldname": "coupon_discount_percentage",
+        "label": "Discount Percentage",
+        "fieldtype": "Float",
+        "description": "Base discount percentage (e.g., 10 for 10%)",
+        "mandatory_depends_on": "eval:doc.promotion_type == 'Coupon - % with Cap'",
+        "insert_after": "coupon_section"
+      },
+      {
+        "fieldname": "coupon_cap_amount",
+        "label": "Cap Amount",
+        "fieldtype": "Currency",
+        "description": "Maximum discount amount allowed (e.g., 100 SAR)",
+        "mandatory_depends_on": "eval:doc.promotion_type == 'Coupon - % with Cap'",
+        "insert_after": "coupon_discount_percentage"
+      },
+      {
+        "fieldname": "coupon_column_break",
+        "fieldtype": "Column Break",
+        "insert_after": "coupon_cap_amount"
+      },
+      {
+        "fieldname": "split_redemption",
+        "label": "Allow Split Redemption",
+        "fieldtype": "Check",
+        "description": "Allow discount to be split across multiple transactions for the same customer",
+        "default": 0,
+        "depends_on": "eval:doc.promotion_type == 'Coupon - % with Cap'",
+        "insert_after": "coupon_column_break"
+      }
+    ]
+  },
+  "property_setters": []
+}
+
+

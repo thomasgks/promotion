@@ -37,6 +37,11 @@ def validate_quotation_promotions(quotation_doc, method):
 
 def apply_quotation_promotions(quotation_doc, method):
 	"""Apply promotions to quotation"""
+	# If quotation is being submitted, preserve promotion data
+	if quotation_doc.docstatus == 1:
+		preserve_promotion_on_submit(quotation_doc, method)
+		return
+	
 	if quotation_doc.docstatus != 0 or quotation_doc.promotion_applied:  # Only for draft documents
 		return
 	
@@ -140,6 +145,30 @@ def remove_quotation_promotions(quotation_doc, method):
 	# Recalculate taxes and totals
 	quotation_doc.calculate_taxes_and_totals()
    
+
+
+def preserve_promotion_on_submit(quotation_doc, method=None):
+	"""Preserve promotion data when quotation is submitted"""
+	try:
+		# Ensure all promotion-related fields are preserved
+		for item in quotation_doc.items:
+			# Check if item has promotion applied (100% discount or has promotion_discount)
+			if (hasattr(item, 'promotion_discount') and item.promotion_discount) or \
+			   (hasattr(item, 'discount_percentage') and flt(item.discount_percentage) == 100.0):
+				# Make sure items keep their discount
+				if not item.discount_amount:
+					if hasattr(item, 'promotion_discount') and item.promotion_discount:
+						item.discount_amount = item.promotion_discount
+						item.discount_percentage = 100.0
+				
+				# Ensure amount reflects the discount
+				if hasattr(item, 'original_rate') and item.original_rate:
+					original_amount = flt(item.original_rate) * flt(item.qty)
+					item.amount = original_amount - flt(item.discount_amount)
+				
+				frappe.msgprint(f"Preserved promotion item: {item.item_code}, Discount: {item.discount_amount}")
+	except Exception as e:
+		frappe.log_error(f"Error preserving promotion on submit: {str(e)}")
 
 
 def get_available_promotions_for_quotation(quotation_doc):

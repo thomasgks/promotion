@@ -212,20 +212,20 @@ class Promotion(Document):
 			# Check item group match (if specified in source)
 			# If item_group is None/null, it matches all item groups
 			if source_item_group.item_group is not None and source_item_group.item_group != "":
-					if source_item_group.item_group != item_group:
-							continue
+				if source_item_group.item_group != item_group:
+					continue
 			
 			# Check brand match (if specified in source)
 			# If brand is None/null, it matches all brands
 			if source_item_group.brand is not None and source_item_group.brand != "":
 				if source_item_group.brand != item_brand:
-						continue
+					continue
 			
 			# Check vendor code match (if specified in source)
 			# If vendor_code is None/null, it matches all vendor codes
 			if source_item_group.custom_vendor_code is not None and source_item_group.custom_vendor_code != "":
 				if source_item_group.custom_vendor_code != item_vendor_code:
-						continue
+					continue
 			
 			# Check season match (if specified in source)
 			# If season_attribute is None/null, it matches all seasons
@@ -691,8 +691,7 @@ class Promotion(Document):
 						# Apply discount using proper fields
 						item.discount_percentage = 100.0  # 100% discount for free items
 						item.discount_amount = discount_amount
-						# DO NOT SET is_free_item flag - it causes ERPNext to remove items on submit
-						# item.is_free_item = 1  # REMOVED
+						item.is_free_item = 1
 						item.promotion_applied = self.name
 						item.promotion_discount = discount_amount
 						
@@ -744,6 +743,10 @@ class Promotion(Document):
 					item.rate = flt(item.original_rate)
 					# Clear the original_rate field
 					item.original_rate = 0
+				
+				# If this was a free item, restore to normal item
+				if hasattr(item, 'is_free_item') and item.is_free_item:
+					item.is_free_item = 0
 				
 				# Recalculate item amount based on current rate
 				item.amount = flt(item.rate) * flt(item.qty)
@@ -1036,26 +1039,31 @@ def remove_coupon_promotion(quotation_name):
 			old_discount_pct = getattr(item, 'discount_percentage', 0)
 			old_discount_amt = getattr(item, 'discount_amount', 0)
 			
-		# Reset discount fields
-		item.discount_percentage = 0
-		item.discount_amount = 0
-		
-		# Restore original rate if it was stored
-		if hasattr(item, 'original_rate') and item.original_rate:
-			item.rate = flt(item.original_rate)
-			frappe.msgprint(f"  Restored rate from {old_rate} to {item.rate}")
-			# Clear the original_rate field
-			item.original_rate = 0
-		
-		# Recalculate item amount based on current rate
-		item.amount = flt(item.rate) * flt(item.qty)
-		frappe.msgprint(f"  Reset: Discount %: {old_discount_pct}->0, Discount Amt: {old_discount_amt}->0, Amount: {item.amount}")
-		
-		# Remove any promotion-specific fields if they exist
-		if hasattr(item, 'promotion_discount'):
-			item.promotion_discount = 0
-		if hasattr(item, 'promotion_applied'):
-			item.promotion_applied = ""
+			# Reset discount fields
+			item.discount_percentage = 0
+			item.discount_amount = 0
+			
+			# Restore original rate if it was stored
+			if hasattr(item, 'original_rate') and item.original_rate:
+				item.rate = flt(item.original_rate)
+				frappe.msgprint(f"  Restored rate from {old_rate} to {item.rate}")
+				# Clear the original_rate field
+				item.original_rate = 0
+			
+			# If this was a free item, restore to normal item
+			if hasattr(item, 'is_free_item') and item.is_free_item:
+				item.is_free_item = 0
+				frappe.msgprint(f"  Removed free item flag")
+			
+			# Recalculate item amount based on current rate
+			item.amount = flt(item.rate) * flt(item.qty)
+			frappe.msgprint(f"  Reset: Discount %: {old_discount_pct}->0, Discount Amt: {old_discount_amt}->0, Amount: {item.amount}")
+			
+			# Remove any promotion-specific fields if they exist
+			if hasattr(item, 'promotion_discount'):
+				item.promotion_discount = 0
+			if hasattr(item, 'promotion_applied'):
+				item.promotion_applied = ""
 		
 		# Recalculate taxes and totals
 		quotation_doc.calculate_taxes_and_totals()
