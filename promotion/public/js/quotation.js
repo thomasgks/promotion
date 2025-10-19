@@ -309,15 +309,15 @@ frappe.ui.form.on("Quotation", {
 });
 
 // Add promotion fields to quotation
-frappe.ui.form.on("Quotation", {
-	onload: function (frm) {
+//frappe.ui.form.on("Quotation", {
+//	onload: function (frm) {
 		// Add custom fields for promotion tracking
-		frm.add_custom_field("promotion_applied", "Check", "Promotions");
-		frm.add_custom_field("promotion_discount", "Currency", "Promotions");
-		frm.add_custom_field("applied_promotions", "Small Text", "Promotions");
-		frm.add_custom_field("coupon_code", "Data", "Promotions");
-	},
-});
+	//	frm.add_custom_field("promotion_applied", "Check", "Promotions");
+	//	frm.add_custom_field("promotion_discount", "Currency", "Promotions");
+	//	frm.add_custom_field("applied_promotions", "Small Text", "Promotions");
+	//	frm.add_custom_field("coupon_code", "Data", "Promotions");
+	//},
+//});
 
 // Add promotion discount column to items table
 frappe.ui.form.on("Quotation Item", {

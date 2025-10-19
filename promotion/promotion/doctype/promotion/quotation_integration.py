@@ -49,10 +49,15 @@ def apply_quotation_promotions(quotation_doc, method):
 	if quotation_doc.coupon_code:
 		try:
 			# Validate and apply coupon code
+			# Note: Coupon Code uses 'custom_disabled' not 'disabled'
 			coupon = frappe.db.get_value("Coupon Code", {
-				"coupon_code": quotation_doc.coupon_code,
-				"disabled": 0
-			}, ["name", "promotion"], as_dict=True)
+				"coupon_code": quotation_doc.coupon_code
+			}, ["name", "promotion", "custom_disabled"], as_dict=True)
+			
+			# Skip if coupon is disabled
+			if coupon and getattr(coupon, 'custom_disabled', 0):
+				frappe.log_error(f"Coupon code {quotation_doc.coupon_code} is disabled")
+				return
 			
 			if coupon and coupon.promotion:
 				promotion_doc = frappe.get_doc("Promotion", coupon.promotion)
@@ -271,15 +276,22 @@ def validate_coupon_code(coupon_code, quotation_name):
 	"""Validate coupon code and return associated promotion"""
 	try:
 		# Check if coupon code exists and is valid
+		# Note: Coupon Code uses 'custom_disabled' not 'disabled'
 		coupon = frappe.db.get_value("Coupon Code", {
-			"coupon_code": coupon_code,
-			"disabled": 0
-		}, ["name", "promotion", "valid_from", "valid_upto"], as_dict=True)
+			"coupon_code": coupon_code
+		}, ["name", "promotion", "valid_from", "valid_upto", "custom_disabled"], as_dict=True)
 		
 		if not coupon:
 			return {
 				"valid": False,
 				"message": "Invalid coupon code"
+			}
+		
+		# Check if coupon is disabled
+		if getattr(coupon, 'custom_disabled', 0):
+			return {
+				"valid": False,
+				"message": "Coupon code is disabled"
 			}
 		
 		# Check validity dates

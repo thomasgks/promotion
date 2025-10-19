@@ -888,10 +888,10 @@ def validate_coupon_code(coupon_code, quotation_name):
 	"""Validate coupon code and return associated promotion"""
 	try:
 		# Check if coupon code exists and is valid
+		# Note: Coupon Code uses 'custom_disabled' not 'disabled'
 		coupon = frappe.db.get_value("Coupon Code", {
-			"coupon_code": coupon_code,
-			"disabled": 0
-		}, ["name", "promotion", "valid_from", "valid_upto", "maximum_use", "used"], as_dict=True)
+			"coupon_code": coupon_code
+		}, ["name", "promotion", "valid_from", "valid_upto", "custom_disabled"], as_dict=True)
 		
 		if not coupon:
 			return {
@@ -899,12 +899,25 @@ def validate_coupon_code(coupon_code, quotation_name):
 				"message": "Invalid coupon code"
 			}
 		
-		# Check if coupon has reached maximum use
-		if coupon.maximum_use and coupon.used >= coupon.maximum_use:
+		# Check if coupon is disabled
+		if getattr(coupon, 'custom_disabled', 0):
 			return {
 				"valid": False,
-				"message": "Coupon code has reached maximum usage limit"
+				"message": "Coupon code is disabled"
 			}
+		
+		# Check if coupon has reached maximum use (only if these fields exist)
+		try:
+			usage_info = frappe.db.get_value("Coupon Code", coupon.name, 
+				["maximum_use", "used"], as_dict=True)
+			if usage_info and usage_info.maximum_use and usage_info.used >= usage_info.maximum_use:
+				return {
+					"valid": False,
+					"message": "Coupon code has reached maximum usage limit"
+				}
+		except Exception:
+			# If maximum_use or used fields don't exist, skip this check
+			pass
 		
 		# Check validity dates
 		quotation_doc = frappe.get_doc("Quotation", quotation_name)
@@ -992,12 +1005,16 @@ def apply_coupon_code(coupon_code, quotation_name):
 			# Force reload the document to ensure changes are persisted
 			frappe.db.commit()
 			
-			# Update coupon usage count AFTER successful save
-			frappe.db.sql("""
-				UPDATE `tabCoupon Code` 
-				SET used = used + 1 
-				WHERE name = %s
-			""", (coupon.name))
+			# Update coupon usage count AFTER successful save (only if used field exists)
+			try:
+				frappe.db.sql("""
+					UPDATE `tabCoupon Code` 
+					SET used = used + 1 
+					WHERE name = %s
+				""", (coupon.name))
+			except Exception:
+				# If used field doesn't exist, skip this update
+				pass
 			
 			return {
 				"success": True,
