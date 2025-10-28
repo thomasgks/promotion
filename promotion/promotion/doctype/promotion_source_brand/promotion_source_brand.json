@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "field:brand",
+ "autoname": "hash",
  "creation": "2024-01-01 00:00:00",
  "default_view": "List",
  "doctype": "DocType",
@@ -39,7 +39,7 @@
  "modified_by": "Administrator",
  "module": "Promotion",
  "name": "Promotion Source Brand",
- "naming_rule": "By fieldname",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [],
  "row_format": "Dynamic",

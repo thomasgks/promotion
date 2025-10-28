@@ -343,188 +343,208 @@ class Promotion(Document):
 		
 		return total_free_items
 
-	def find_cheapest_items_for_promotion(self, quotation_doc, target_items, num_free_items):
-		"""Find the cheapest items to make free with deterministic sorting priority"""
+	def find_lowest_priced_items(self, quotation_doc, target_items, num_free_items):
+		"""Find the lowest priced items to make free with Buy X Get X Free logic"""
 		try:
-			frappe.msgprint(f"=== FINDING CHEAPEST ITEMS DEBUG ===")
+			frappe.msgprint(f"=== FINDING LOWEST PRICED ITEMS DEBUG ===")
 			frappe.msgprint(f"Target items: {target_items}")
 			frappe.msgprint(f"Number of free items needed: {num_free_items}")
+			
+			# Convert num_free_items to integer to avoid slice errors
+			num_free_items = int(flt(num_free_items))
+			frappe.msgprint(f"Converted num_free_items to integer: {num_free_items}")
 			
 			# Get all items in quotation that match target criteria
 			candidate_items = []
 			
+			frappe.msgprint(f"Scanning {len(quotation_doc.items)} items in quotation...")
+			
 			for item in quotation_doc.items:
-				frappe.msgprint(f"Checking item {item.item_code} against target criteria...")
+				frappe.msgprint(f"--- Checking item: {item.item_code} ---")
+				frappe.msgprint(f"  Rate: {item.rate}, Qty: {item.qty}, Amount: {item.amount}")
+				
+				# Skip already free items
+				if getattr(item, 'promotion_applied', False):
+					frappe.msgprint(f"  ✗ Skipped (already free item)")
+					continue
+				
+				# Check if item matches target criteria
 				if self.item_matches_target_criteria(item, target_items):
 					frappe.msgprint(f"  ✓ Item {item.item_code} matches target criteria")
-					# Ensure original rate is stored
-					if not hasattr(item, 'original_rate') or not item.original_rate:
-						if getattr(item, 'is_free_item', False) and hasattr(item, 'promotion_discount'):
-							item.original_rate = flt(item.promotion_discount)
-						else:
-							item.original_rate = flt(item.rate)
-					
-					# Skip already free items
-					if not getattr(item, 'is_free_item', False):
-						candidate_items.append(item)
-						frappe.msgprint(f"  ✓ Added to candidates")
-					else:
-						frappe.msgprint(f"  ✗ Skipped (already free)")
+					candidate_items.append(item)
+					frappe.msgprint(f"  ✓ Added to candidates")
 				else:
 					frappe.msgprint(f"  ✗ Item {item.item_code} does not match target criteria")
 			
-			frappe.msgprint(f"Total candidate items: {len(candidate_items)}")
+			frappe.msgprint(f"Total candidate items found: {len(candidate_items)}")
+			
 			if not candidate_items:
-				frappe.msgprint("No candidate items found for promotion")
+				frappe.msgprint("❌ No candidate items found for promotion")
 				return []
 			
+			# Sort by unit price (lowest first), then by creation order
+			candidate_items.sort(key=lambda x: (flt(x.rate), getattr(x, 'idx', 0)))
+			
+			frappe.msgprint(f"Sorted candidate items (lowest price first):")
+			for i, item in enumerate(candidate_items):
+				frappe.msgprint(f"  {i+1}. {item.item_code} - Rate: {item.rate}, Qty: {item.qty}")
+			
 			# Create individual item units for proper quantity handling
-			individual_items = []
+			individual_units = []
 			for item in candidate_items:
 				item_qty = int(flt(item.qty))
-				original_rate = getattr(item, 'original_rate', item.rate)
+				item_rate = flt(item.rate)
 				
-				# Get item details for sorting
-				item_details = frappe.db.get_value("Item", item.item_code, 
-					["brand"], as_dict=True)
-				item_brand = item_details.brand if item_details else ""
+				frappe.msgprint(f"Processing {item.item_code}: {item_qty} units available")
 				
-				# Add each individual unit with unique line identifier
 				for i in range(item_qty):
-					individual_items.append({
-						'item': item,
-						'rate': original_rate,
-						'brand': item_brand,
+					individual_units.append({
+						'item': item,  # Reference to the source row
+						'rate': item_rate,
 						'item_code': item.item_code,
+						'item_name': item.item_name,
+						'price_list_rate':item.price_list_rate,
 						'row_index': getattr(item, 'idx', 0),
-						'unit_index': i + 1,
-						'line_id': f"{item.item_code}_{getattr(item, 'idx', 0)}_{id(item)}"  # Unique line identifier
+						'unit_index': i + 1
 					})
 			
-			# Sort with deterministic priority: Unit Price → Brand → Item Code → Row Index
-			individual_items.sort(key=lambda x: (
-				x['rate'],           # Unit Price (lowest first)
-				x['brand'] or "",    # Brand (A-Z)
-				x['item_code'],      # Item Code (A-Z)
-				x['row_index']       # Row Index (ascending)
-			))
+			frappe.msgprint(f"Total individual units available: {len(individual_units)}")
 			
-			# Select the cheapest individual items
-			selected_items = {}
-			selected_lines = set()  # Track which lines we've already selected
-			remaining_free_qty = num_free_items
+			if len(individual_units) < num_free_items:
+				frappe.msgprint(f"⚠️ Warning: Only {len(individual_units)} units available, but {num_free_items} free items needed")
+				frappe.msgprint("Will apply promotion to all available units")
 			
-			for item_unit in individual_items:
-				if remaining_free_qty <= 0:
-					break
-				
-				item = item_unit['item']
-				item_code = item.item_code
-				line_id = item_unit['line_id']
-				
-				# Skip if we've already selected this line
-				if line_id in selected_lines:
-					continue
-				
-				# Track how many units of this item we're making free
-				if item_code not in selected_items:
-					selected_items[item_code] = {
-						'items': [],  # Store all item objects for this item_code
-						'free_units': 0,
-						'total_units': 0
-					}
-				
-				# Add this specific item object to the list
-				selected_items[item_code]['items'].append(item)
-				selected_items[item_code]['free_units'] += 1
-				selected_items[item_code]['total_units'] += int(flt(item.qty))
-				selected_lines.add(line_id)
-				remaining_free_qty -= 1
+			# Select the lowest priced units (up to num_free_items) - ensure integer for slice
+			max_units_to_select = min(num_free_items, len(individual_units))
+			selected_units = individual_units[:max_units_to_select]
 			
-			# Convert selected items to free_items list
-			free_items = []
-			for item_code, data in selected_items.items():
-				if data['free_units'] > 0:
-					frappe.msgprint(f"  Item {item_code}: {data['free_units']} units to make free across {len(data['items'])} lines")
-					# Distribute free units across different lines
-					units_per_line = data['free_units'] // len(data['items'])
-					remaining_units = data['free_units'] % len(data['items'])
-					
-					for i, item in enumerate(data['items']):
-						units_for_this_line = units_per_line
-						if i < remaining_units:  # Distribute remaining units to first few lines
-							units_for_this_line += 1
-						
-						# Add this item object for each unit that should be free on this line
-						for j in range(units_for_this_line):
-							free_items.append(item)
+			frappe.msgprint(f"✅ Selected {len(selected_units)} units as free items:")
+			for i, unit in enumerate(selected_units):
+				frappe.msgprint(f"  {i+1}. {unit['item_code']} - Rate: {unit['rate']} (Row {unit['row_index']})")
 			
-			frappe.msgprint(f"Final free_items list: {len(free_items)} items")
-			for i, item in enumerate(free_items):
-				frappe.msgprint(f"  {i+1}. {item.item_code}")
-			
-			frappe.msgprint(f"=== RETURNING {len(free_items)} FREE ITEMS ===")
-			return free_items
+			return selected_units
 			
 		except Exception as e:
-			frappe.log_error(f"Error finding cheapest items for promotion: {str(e)}")
+			frappe.log_error(f"Error finding lowest priced items: {str(e)}")
+			frappe.msgprint(f"❌ Error finding lowest priced items: {str(e)}")
+			return []
+
+	def find_cheapest_applicable_items(self, quotation_doc, applicable_items, num_free_items):
+		"""Find cheapest items from applicable items as fallback when no target criteria match"""
+		try:
+			frappe.msgprint("=== FALLBACK: FINDING CHEAPEST APPLICABLE ITEMS ===")
+			
+			# Convert num_free_items to integer
+			num_free_items = int(flt(num_free_items))
+			frappe.msgprint(f"Looking for {num_free_items} free items from applicable items")
+			
+			# Sort applicable items by price (cheapest first)
+			applicable_items.sort(key=lambda x: flt(x.rate))
+			
+			frappe.msgprint(f"Sorted applicable items (cheapest first):")
+			for i, item in enumerate(applicable_items):
+				frappe.msgprint(f"  {i+1}. {item.item_code} - Rate: {item.rate}, Qty: {item.qty}")
+			
+			# Create individual item units
+			individual_units = []
+			for item in applicable_items:
+				item_qty = int(flt(item.qty))
+				item_rate = flt(item.rate)
+				
+				# Skip already free items
+				if getattr(item, 'promotion_applied', False):
+					continue
+					
+				for i in range(item_qty):
+					individual_units.append({
+						'item': item,
+						'rate': item_rate,
+						'item_code': item.item_code,
+						'item_name': item.item_name,
+						'price_list_rate':item.price_list_rate,
+						'row_index': getattr(item, 'idx', 0),
+						'unit_index': i + 1
+					})
+			
+			frappe.msgprint(f"Total individual units from applicable items: {len(individual_units)}")
+			
+			# Select the cheapest units - ensure integer for slice
+			max_units_to_select = min(num_free_items, len(individual_units))
+			selected_units = individual_units[:max_units_to_select]
+			
+			frappe.msgprint(f"✅ Selected {len(selected_units)} units as free items (fallback):")
+			for i, unit in enumerate(selected_units):
+				frappe.msgprint(f"  {i+1}. {unit['item_code']} - Rate: {unit['rate']}")
+			
+			return selected_units
+			
+		except Exception as e:
+			frappe.log_error(f"Error finding cheapest applicable items: {str(e)}")
+			frappe.msgprint(f"Error in fallback: {str(e)}")
+			import traceback
+			frappe.msgprint(f"Detailed traceback: {traceback.format_exc()}")
 			return []
 
 	def item_matches_target_criteria(self, item, target_items):
 		"""Check if an item matches the target criteria for promotion"""
 		try:
+			frappe.msgprint(f"  Checking target criteria for {item.item_code}...")
+			
 			# Get item details
 			item_details = frappe.db.get_value("Item", item.item_code,
 				["item_group", "brand"], as_dict=True)
 			
 			if not item_details:
-				frappe.msgprint(f"  ✗ No item details found for {item.item_code}")
+				frappe.msgprint(f"    ✗ No item details found for {item.item_code}")
 				return False
 			
 			item_brand = item_details.brand
-			frappe.msgprint(f"  Item brand: {item_brand}")
+			frappe.msgprint(f"    Item Brand: {item_brand}")
+			
+			# If no target items specified, all items are eligible
+			if not target_items:
+				frappe.msgprint(f"    ✓ No target criteria specified - all items eligible")
+				return True
 			
 			# Check if item matches any target criteria
 			for target in target_items:
-				frappe.msgprint(f"  Checking against target: {target}")
+				frappe.msgprint(f"    Checking target: {target}")
 				
 				if target.get("target_brand"):
 					target_brand = target.get("target_brand")
-					frappe.msgprint(f"    Target brand: {target_brand}")
+					frappe.msgprint(f"      Target Brand: {target_brand}")
 					if target_brand == item_brand:
-						frappe.msgprint(f"    ✓ Brand match: {item_brand} == {target_brand}")
+						frappe.msgprint(f"      ✓ Brand match: {item_brand} == {target_brand}")
 						return True
 					else:
-						frappe.msgprint(f"    ✗ Brand mismatch: {item_brand} != {target_brand}")
+						frappe.msgprint(f"      ✗ Brand mismatch: {item_brand} != {target_brand}")
 				
 				if target.get("target_item"):
 					target_item = target.get("target_item")
-					frappe.msgprint(f"    Target item: {target_item}")
+					frappe.msgprint(f"      Target Item: {target_item}")
 					if target_item == item.item_code:
-						frappe.msgprint(f"    ✓ Item match: {item.item_code} == {target_item}")
+						frappe.msgprint(f"      ✓ Item match: {item.item_code} == {target_item}")
 						return True
 					else:
-						frappe.msgprint(f"    ✗ Item mismatch: {item.item_code} != {target_item}")
+						frappe.msgprint(f"      ✗ Item mismatch: {item.item_code} != {target_item}")
 			
-			frappe.msgprint(f"  ✗ No target criteria matched for {item.item_code}")
+			frappe.msgprint(f"    ✗ No target criteria matched for {item.item_code}")
 			return False
 			
 		except Exception as e:
 			frappe.log_error(f"Error checking target criteria: {str(e)}")
-			frappe.msgprint(f"  ✗ Error checking target criteria: {str(e)}")
+			frappe.msgprint(f"    ✗ Error checking target criteria: {str(e)}")
 			return False
 
 	def apply_promotion(self, quotation_doc):
-		"""Apply promotion to quotation document with robotics logic"""
+		"""Apply Buy X Get X Free promotion to quotation document"""
 		try:
-			# Debug: Show promotion details
-			frappe.msgprint(f"=== PROMOTION DEBUG START ===")
+			frappe.msgprint(f"=== BUY X GET X FREE PROMOTION DEBUG START ===")
 			frappe.msgprint(f"Promotion: {self.name}")
 			frappe.msgprint(f"Based On: {self.based_on}")
 			frappe.msgprint(f"Min Qty: {self.min_qty}, Min Amount: {self.min_amount}")
 			frappe.msgprint(f"Reward Qty: {self.reward_qty}")
 			frappe.msgprint(f"Total items in quotation: {len(quotation_doc.items)}")
-			frappe.msgprint(f"Actions count: {len(self.actions) if self.actions else 0}")
 			
 			# Show all actions
 			for i, action in enumerate(self.actions or []):
@@ -580,29 +600,79 @@ class Promotion(Document):
 			frappe.msgprint(f"Target items found: {len(all_target_items)}")
 			for i, target in enumerate(all_target_items):
 				frappe.msgprint(f"  Target {i+1}: {target}")
-			if not all_target_items:
-				frappe.msgprint("No target items found for promotion", alert=True)
-				return False
-		
-			# Find cheapest items to make free
-			frappe.msgprint(f"Looking for {total_free_items} free items...")
-			free_items = self.find_cheapest_items_for_promotion(quotation_doc, all_target_items, total_free_items)
-			frappe.msgprint(f"Found {len(free_items)} items to make free")
 			
-			# Fallback: If no target items match, apply to cheapest applicable items
-			if not free_items:
-				frappe.msgprint("No target items match, applying to cheapest applicable items...")
-				free_items = self.find_cheapest_applicable_items(quotation_doc, applicable_items, total_free_items)
-				frappe.msgprint(f"Fallback: Found {len(free_items)} applicable items to make free")
-				if not free_items:
-					frappe.msgprint("No suitable items found for free promotion", alert=True)
+			# Find lowest priced items to make free
+			frappe.msgprint(f"Looking for {total_free_items} lowest priced items...")
+			free_item_units = self.find_lowest_priced_items(quotation_doc, all_target_items, total_free_items)
+			frappe.msgprint(f"Found {len(free_item_units)} items to make free")
+			
+			# FALLBACK: If no target items match, check if we should apply to any items
+			if not free_item_units:
+				frappe.msgprint("⚠️ No target items found, checking fallback options...")
+				
+				# Option 1: If no target criteria specified, apply to cheapest applicable items
+				if not all_target_items:
+					frappe.msgprint("No target criteria specified - applying to cheapest applicable items")
+					free_item_units = self.find_cheapest_applicable_items(quotation_doc, applicable_items, total_free_items)
+				else:
+					frappe.msgprint("Target criteria specified but no matches found")
+					frappe.msgprint("Please check your promotion target settings")
 					return False
 			
-			# Apply discounts to selected items
-			applied = self.apply_discounts_to_items(quotation_doc, free_items, total_free_items)
-			
+			if not free_item_units:
+				frappe.msgprint("No suitable items found for free promotion", alert=True)
+				return False
+			total_qty_applicable = sum(flt(item.qty) for item in applicable_items)
+			frappe.msgprint(f"Applicable items BEFORE: {len(applicable_items)} Qty={total_qty_applicable}")
+			# Apply free items as new rows
+			applied = self.apply_free_items_as_new_rows(quotation_doc, free_item_units)
+			total_qtya = sum(flt(item.qty) for item in applicable_items)
+			frappe.msgprint(f"Applicable items AFTER: {len(applicable_items)} QTY={total_qtya}")
 			if applied:
-				frappe.msgprint(f"Promotion applied successfully: {total_free_items} items made free", alert=True)
+				frappe.msgprint("Applied=True")
+
+				total_qty = total_qty_applicable #sum(flt(item.qty) for item in applicable_items)
+				frappe.msgprint(f"total_qty(applicable)={total_qty}")
+				min_qty = flt(self.min_qty)
+				frappe.msgprint(f"min_qty={min_qty}")
+				reward_qty=flt(self.reward_qty)
+				frappe.msgprint(f"reward_qty={reward_qty}")
+				complete_sets = int(total_qty / min_qty) if min_qty > 0 else 0
+				base_count= complete_sets * (min_qty-reward_qty)
+				frappe.msgprint(f"complete_sets={complete_sets}")
+
+				count = 0
+				for item in quotation_doc.items:
+					for applied_item in applicable_items:
+						if item.item_code == applied_item.item_code:
+							if count < base_count and item.promotion_applied==0:
+								item.set("applied_promotions", self.title)  # preferred setter
+								count += 1
+							break  # exit inner loop after match
+					if count >= base_count:
+						break
+				for item in quotation_doc.items:
+					frappe.msgprint(f"ITEM={item.item_code} → {item.applied_promotions}")
+
+
+				# Force Frappe to recognize child table changes
+				quotation_doc.set("items", quotation_doc.items)
+				quotation_doc.flags.ignore_validate = True
+				#quotation_doc.save()
+
+				# Calculate total discount
+				total_discount = sum(unit['rate'] for unit in free_item_units)
+				
+				# Update quotation promotion fields
+				quotation_doc.promotion_applied = 1
+				quotation_doc.promotion_discount = total_discount
+				if not getattr(quotation_doc, 'applied_promotions', ''):
+					quotation_doc.applied_promotions = self.title
+				elif self.title not in quotation_doc.applied_promotions:
+					quotation_doc.applied_promotions += f", {self.title}"
+				
+				frappe.msgprint(f"Promotion applied successfully: {len(free_item_units)} items made free", alert=True)
+				frappe.msgprint(f"Total discount: {total_discount}", alert=True)
 			
 			return applied
 			
@@ -610,153 +680,181 @@ class Promotion(Document):
 			frappe.log_error(f"Error applying promotion: {str(e)}")
 			frappe.msgprint(f"Error applying promotion: {str(e)}", alert=True)
 			return False
-
-	def find_cheapest_applicable_items(self, quotation_doc, applicable_items, num_free_items):
-		"""Find cheapest items from applicable items as fallback"""
+	
+	def apply_free_items_as_new_rows(self, quotation_doc, free_item_units):
+		"""Apply free items by either modifying existing rows or creating new rows"""
 		try:
-			# Sort applicable items by price (cheapest first)
-			sorted_items = sorted(applicable_items, key=lambda x: flt(x.rate))
+			frappe.msgprint(f"=== APPLYING FREE ITEMS ===")
+			frappe.msgprint(f"Free items to apply: {len(free_item_units)}")
 			
-			free_items = []
-			remaining_free_qty = num_free_items
-			
-			for item in sorted_items:
-				if remaining_free_qty <= 0:
-					break
+			# Group free items by their source row and item_code
+			free_items_by_row = {}
+			for unit in free_item_units:
+				source_item = unit['item']
+				row_key = id(source_item)  # Unique identifier for the source row
 				
-				# Skip already free items
-				if not getattr(item, 'is_free_item', False):
-					free_items.append(item)
-					remaining_free_qty -= 1
-			
-			return free_items
-			
-		except Exception as e:
-			frappe.log_error(f"Error finding cheapest applicable items: {str(e)}")
-			return []
-
-	def apply_discounts_to_items(self, quotation_doc, free_items, total_free_items):
-		"""Apply discounts to selected items using proper discount fields"""
-		try:
-			frappe.msgprint(f"=== APPLYING DISCOUNTS DEBUG ===")
-			frappe.msgprint(f"Total free items to apply: {total_free_items}")
-			frappe.msgprint(f"Free items received: {len(free_items)}")
-			
-			remaining_free_qty = total_free_items
-			applied = False
-			
-			# Group items by item_code to handle multiple units
-			item_groups = {}
-			for item in free_items:
-				if item.item_code not in item_groups:
-					item_groups[item.item_code] = {
-						'items': [],
-						'count': 0
+				if row_key not in free_items_by_row:
+					free_items_by_row[row_key] = {
+						'source_item': source_item,
+						'item_code': unit['item_code'],
+						'item_name': unit['item_name'],
+						'rate': unit['rate'],
+      					'price_list_rate': unit['price_list_rate'],
+						'free_units': 0,
+						'total_units': int(flt(source_item.qty))
 					}
-				item_groups[item.item_code]['items'].append(item)
-				item_groups[item.item_code]['count'] += 1
+				free_items_by_row[row_key]['free_units'] += 1
 			
-			frappe.msgprint(f"Item groups: {[(code, data['count']) for code, data in item_groups.items()]}")
+			frappe.msgprint(f"Free items grouped by {len(free_items_by_row)} source rows")
 			
-			for item_code, data in item_groups.items():
-				if remaining_free_qty <= 0:
-					break
+			# Process each source row
+			for row_key, data in free_items_by_row.items():
+				source_item = data['source_item']
+				free_units = data['free_units']
+				total_units = data['total_units']
 				
-				free_units_needed = data['count']
-				frappe.msgprint(f"Processing {item_code}: {free_units_needed} units needed across {len(data['items'])} lines")
+				frappe.msgprint(f"Processing {source_item.item_code}: {free_units} free units out of {total_units} total units")
 				
-				# Process each line of this item code
-				for item in data['items']:
-					if remaining_free_qty <= 0:
-						break
+				if free_units == total_units:
+					# All units in this row are free - apply 100% discount on same row
+					frappe.msgprint(f"  All {total_units} units are free - applying 100% discount on same row")
+					self._apply_discount_to_existing_row(source_item, free_units)
 					
-					frappe.msgprint(f"  Processing line: {item.item_code} (Row {getattr(item, 'idx', '?')})")
+				elif free_units < total_units:
+					# Partial units are free - reduce qty and create new free row
+					frappe.msgprint(f"  {free_units} out of {total_units} units are free - splitting row")
+					self._split_row_for_free_items(quotation_doc, source_item, free_units, data)
 					
-					# Store original rate if not already stored
-					if not hasattr(item, 'original_rate') or not item.original_rate:
-						item.original_rate = flt(item.rate)
-					
-					original_rate = item.original_rate
-					item_qty = flt(item.qty)
-					
-					# Calculate how much of this line should be free
-					free_qty = min(item_qty, remaining_free_qty)
-					
-					frappe.msgprint(f"    Item qty: {item_qty}, Free qty: {free_qty}, Original rate: {original_rate}")
-					
-					if free_qty > 0:
-						# Calculate discount amount for the free quantity
-						discount_amount = free_qty * original_rate
-						
-						# Apply discount using proper fields
-						item.discount_percentage = 100.0  # 100% discount for free items
-						item.discount_amount = discount_amount
-						# DO NOT SET is_free_item flag - it causes ERPNext to remove items on submit
-						# item.is_free_item = 1  # REMOVED
-						item.promotion_applied = self.name
-						item.promotion_discount = discount_amount
-						
-						# Update amount to reflect discount
-						item.amount = (item_qty * original_rate) - discount_amount
-						
-						frappe.msgprint(f"    Applied discount: {discount_amount}, New amount: {item.amount}")
-						
-						remaining_free_qty -= free_qty
-						applied = True
-					else:
-						frappe.msgprint(f"    No free units to apply to this line")
+				else:
+					frappe.msgprint(f"  ⚠️ Error: Free units ({free_units}) exceed total units ({total_units})")
 			
-			frappe.msgprint(f"Remaining free qty after processing: {remaining_free_qty}")
-			return applied
+			# Recalculate taxes and totals
+			quotation_doc.calculate_taxes_and_totals()
+			
+			frappe.msgprint(f"✅ Successfully applied free items")
+			return True
 			
 		except Exception as e:
-			frappe.log_error(f"Error applying discounts to items: {str(e)}")
-		return False
+			frappe.log_error(f"Error applying free items: {str(e)}")
+			frappe.msgprint(f"Error applying free items: {str(e)}", alert=True)
+			return False
+
+	def _apply_discount_to_existing_row(self, source_item, free_units):
+		"""Apply 100% discount to existing row (when all units are free)"""
+		try:
+			# Store original rate if not already stored
+			if not hasattr(source_item, 'price_list_rate') or not source_item.price_list_rate:
+				source_item.price_list_rate = flt(source_item.rate)
+			
+			price_list_rate = source_item.price_list_rate
+			total_discount = free_units * price_list_rate
+			
+			# Apply 100% discount
+			source_item.discount_percentage = 100.0
+			source_item.discount_amount = total_discount
+			source_item.promotion_applied = 1
+			source_item.applied_promotions = self.title
+			source_item.promotion_discount = total_discount
+			
+			# Update amount to reflect discount
+			source_item.amount = 0.00
+			
+			frappe.msgprint(f"    Applied 100% discount to existing row: {source_item.item_code}")
+			frappe.msgprint(f"    Original amount: {free_units * price_list_rate}, Discount: {total_discount}")
+			
+		except Exception as e:
+			frappe.log_error(f"Error applying discount to existing row: {str(e)}")
+			raise
+
+	def _split_row_for_free_items(self, quotation_doc, source_item, free_units, data):
+		"""Split row by reducing quantity and creating new free row"""
+		try:
+			# Store original rate if not already stored
+			if not hasattr(source_item, 'price_list_rate') or not source_item.price_list_rate:
+				source_item.price_list_rate = flt(source_item.rate)
+			
+			price_list_rate = source_item.price_list_rate
+			remaining_units = data['total_units'] - free_units
+			
+			frappe.msgprint(f"    Reducing row from {data['total_units']} to {remaining_units} units")
+			
+			# Update the original row with reduced quantity
+			source_item.qty = remaining_units
+			source_item.amount = remaining_units * price_list_rate
+			
+			# Create new row for free items
+			new_item = quotation_doc.append('items', {})
+			new_item.item_code = data['item_code']
+			new_item.item_name = data['item_name']
+			new_item.price_list_rate = price_list_rate #data['price_list_rate']			
+			new_item.qty = free_units
+			new_item.rate = 0.00  # Free item
+			new_item.amount = 0.00
+			new_item.discount_percentage=100
+			new_item.discount_amount=price_list_rate
+			new_item.promotion_applied = 1  # Mark as free item
+			new_item.applied_promotions = self.title
+			new_item.promotion_discount = free_units * price_list_rate  # Original value for reporting
+			
+			# Copy additional fields from source item
+			for field in ['item_group', 'brand', 'description', 'uom', 'warehouse']:
+				if hasattr(source_item, field) and getattr(source_item, field):
+					setattr(new_item, field, getattr(source_item, field))
+			
+			frappe.msgprint(f"    Created new free row: {free_units} units of {data['item_code']}")
+			frappe.msgprint(f"    Original row updated: {remaining_units} paid units remain")
+			
+		except Exception as e:
+			frappe.log_error(f"Error splitting row for free items: {str(e)}")
+			raise
 
 	def get_all_target_items(self):
 		"""Get all target items from all actions"""
 		target_items = []
 		
-		for action in self.actions:
+		frappe.msgprint(f"Getting target items from {len(self.actions)} actions...")
+		
+		for i, action in enumerate(self.actions):
+			frappe.msgprint(f"Action {i+1}:")
+			
 			if action.target_brand:
+				frappe.msgprint(f"  - Target Brand: {action.target_brand}")
 				target_items.append({"target_brand": action.target_brand})
 		
 			if action.target_item:
+				frappe.msgprint(f"  - Target Item: {action.target_item}")
 				target_items.append({"target_item": action.target_item})
 		
+		frappe.msgprint(f"Total target items found: {len(target_items)}")
 		return target_items
 
 	def remove_promotion(self, quotation_doc):
-		"""Remove all promotion-related discounts and restore original values"""
+		"""Remove all promotion-related items and restore original values"""
 		try:
 			# Reset promotion-related fields
 			quotation_doc.promotion_applied = 0
 			quotation_doc.coupon_code = ""
+			quotation_doc.promotion_discount = 0
+			quotation_doc.applied_promotions = ""
 			
-			# Remove discounts from all items (DO NOT DELETE ITEMS)
+			# Remove free items (items with promotion_applied = 1)
+			# Remove discount from items that were part of promotions
 			for item in quotation_doc.items:
-				# Reset discount fields
-				item.discount_percentage = 0
-				item.discount_amount = 0
-				
-				# Restore original rate if it was stored
-				if hasattr(item, 'original_rate') and item.original_rate:
-					item.rate = flt(item.original_rate)
-					# Clear the original_rate field
-					item.original_rate = 0
-				
-				# Recalculate item amount based on current rate
-				item.amount = flt(item.rate) * flt(item.qty)
-				
-				# Remove any promotion-specific fields if they exist
-				if hasattr(item, 'promotion_discount'):
-					item.promotion_discount = 0
-				if hasattr(item, 'promotion_applied'):
-					item.promotion_applied = ""
+				if getattr(item, 'promotion_applied', False):
+					# Reset discount fields
+					item.discount_percentage = 0
+					item.discount_amount = 0
+					item.rate = item.price_list_rate  # Reset to original price
+					
+					# Reset promotion flags on item
+					item.promotion_applied = 0
+					item.promotion_discount=0
+					item.applied_promotions = ""
 			
 			# Recalculate taxes and totals
 			quotation_doc.calculate_taxes_and_totals()
 			
+			frappe.msgprint("Promotion removed successfully - free items deleted", alert=True)
 			return True
 			
 		except Exception as e:
@@ -768,15 +866,17 @@ class Promotion(Document):
 		summary = {
 			"promotion_title": self.title,
 			"discount_amount": 0,
-			"applied_items": []
+			"free_items": []
 		}
 		
 		for item in quotation_doc.items:
-			if hasattr(item, 'promotion_discount') and item.promotion_discount:
+			if getattr(item, 'promotion_applied', False):
 				summary["discount_amount"] += flt(item.promotion_discount)
-				summary["applied_items"].append({
+				summary["free_items"].append({
 					"item_code": item.item_code,
 					"item_name": item.item_name,
+					"qty": item.qty,
+					"price_list_rate": flt(item.promotion_discount) / flt(item.qty) if item.qty else 0,
 					"discount_amount": item.promotion_discount
 				})
 		
@@ -836,7 +936,80 @@ class Promotion(Document):
 				"message": "Error testing promotion: {}".format(str(e))
 			}
 
+	@frappe.whitelist()
+	def apply_coupon_code(self, coupon_code, quotation_name):
+		"""Apply coupon code and associated promotion to quotation - Method version"""
+		try:
+			# First validate the coupon code
+			validation_result = validate_coupon_code(coupon_code, quotation_name)
+			
+			if not validation_result["valid"]:
+				return {
+					"success": False,
+					"message": validation_result["message"]
+				}
+			
+			# Get quotation and promotion
+			quotation_doc = frappe.get_doc("Quotation", quotation_name)
+			coupon = frappe.db.get_value("Coupon Code", {
+				"coupon_code": coupon_code
+			}, ["name", "promotion"], as_dict=True)
+			
+			if not coupon.promotion:
+				return {
+					"success": False,
+					"message": "No promotion associated with this coupon code"
+				}
+			
+			promotion_doc = frappe.get_doc("Promotion", coupon.promotion)
+			
+			frappe.msgprint(f"=== COUPON CODE DEBUG ===")
+			frappe.msgprint(f"Coupon: {coupon_code}")
+			frappe.msgprint(f"Promotion: {promotion_doc.name}")
+			frappe.msgprint(f"Quotation: {quotation_name}")
+			
+			# Apply the promotion
+			frappe.msgprint(f"Calling apply_promotion method...")
+			if promotion_doc.apply_promotion(quotation_doc):
+				# Set promotion applied flag and coupon code BEFORE saving
+				quotation_doc.promotion_applied = 1
+				quotation_doc.coupon_code = coupon.name
+				
+				# Save quotation with promotion changes
+				quotation_doc.flags.ignore_validate = True
+				quotation_doc.flags.ignore_on_update = True
+				quotation_doc.save()
+				
+				# Force reload the document to ensure changes are persisted
+				frappe.db.commit()
+				
+				# Update coupon usage count AFTER successful save (only if used field exists)
+				try:
+					frappe.db.sql("""
+						UPDATE `tabCoupon Code` 
+						SET used = used + 1 
+						WHERE name = %s
+					""", (coupon.name))
+				except Exception:
+					# If used field doesn't exist, skip this update
+					pass
+				
+				return {
+					"success": True,
+					"message": "Coupon code applied successfully",
+					"promotion": validation_result["promotion"]
+				}
+			else:
+				return {
+					"success": False,
+					"message": "Promotion conditions not met for this quotation"
+				}
+				
+		except Exception as e:
+			frappe.throw(_("Error applying coupon code: {0}").format(str(e)))
 
+
+# Standalone functions (not methods of Promotion class)
 @frappe.whitelist()
 def apply_promotion_to_quotation(quotation_name, promotion_name):
 	"""Apply promotion to quotation"""
@@ -960,7 +1133,7 @@ def validate_coupon_code(coupon_code, quotation_name):
 
 @frappe.whitelist()
 def apply_coupon_code(coupon_code, quotation_name):
-	"""Apply coupon code and associated promotion to quotation"""
+	"""Apply coupon code and associated promotion to quotation - Standalone function version"""
 	try:
 		# First validate the coupon code
 		validation_result = validate_coupon_code(coupon_code, quotation_name)
@@ -1040,6 +1213,7 @@ def remove_coupon_promotion(quotation_name):
 		# Reset promotion-related fields
 		quotation_doc.promotion_applied = 0
 		quotation_doc.coupon_code = ""
+		quotation_doc.applied_promotions=""
 		
 		frappe.msgprint("=== REMOVING PROMOTION ===")
 		frappe.msgprint(f"Total items before removal: {len(quotation_doc.items)}")
@@ -1053,26 +1227,27 @@ def remove_coupon_promotion(quotation_name):
 			old_discount_pct = getattr(item, 'discount_percentage', 0)
 			old_discount_amt = getattr(item, 'discount_amount', 0)
 			
-		# Reset discount fields
-		item.discount_percentage = 0
-		item.discount_amount = 0
-		
-		# Restore original rate if it was stored
-		if hasattr(item, 'original_rate') and item.original_rate:
-			item.rate = flt(item.original_rate)
-			frappe.msgprint(f"  Restored rate from {old_rate} to {item.rate}")
-			# Clear the original_rate field
-			item.original_rate = 0
-		
-		# Recalculate item amount based on current rate
-		item.amount = flt(item.rate) * flt(item.qty)
-		frappe.msgprint(f"  Reset: Discount %: {old_discount_pct}->0, Discount Amt: {old_discount_amt}->0, Amount: {item.amount}")
-		
-		# Remove any promotion-specific fields if they exist
-		if hasattr(item, 'promotion_discount'):
-			item.promotion_discount = 0
-		if hasattr(item, 'promotion_applied'):
-			item.promotion_applied = ""
+			# Reset discount fields
+			item.discount_percentage = 0
+			item.discount_amount = 0
+			
+			# Restore original rate if it was stored
+			if hasattr(item, 'price_list_rate') and item.price_list_rate:
+				item.rate = flt(item.price_list_rate)
+				frappe.msgprint(f"  Restored rate from {old_rate} to {item.rate}")
+				# Clear the price_list_rate field
+				item.price_list_rate = 0
+			
+			# Recalculate item amount based on current rate
+			item.amount = flt(item.rate) * flt(item.qty)
+			frappe.msgprint(f"  Reset: Discount %: {old_discount_pct}->0, Discount Amt: {old_discount_amt}->0, Amount: {item.amount}")
+			
+			# Remove any promotion-specific fields if they exist
+			if hasattr(item, 'promotion_discount'):
+				item.promotion_discount = 0
+			if hasattr(item, 'promotion_applied'):
+				item.promotion_applied = 0
+				item.applied_promotions=""
 		
 		# Recalculate taxes and totals
 		quotation_doc.calculate_taxes_and_totals()

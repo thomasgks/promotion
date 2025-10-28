@@ -100,11 +100,14 @@ fixtures = [
 doc_events = {
 	"Quotation": {
 		"validate": "promotion.promotion.doctype.promotion.quotation_integration.validate_quotation_promotions",
-		"before_submit": "promotion.promotion.doctype.promotion.quotation_integration.preserve_promotion_on_submit",
-		"on_submit": "promotion.promotion.doctype.promotion.quotation_integration.apply_quotation_promotions",
-		"on_cancel": "promotion.promotion.doctype.promotion.quotation_integration.remove_quotation_promotions",
-		"after_save": "promotion.promotion.doctype.promotion.quotation_integration.apply_quotation_promotions",
-	}
+		#"before_submit": "promotion.promotion.doctype.promotion.quotation_integration.preserve_promotion_on_submit",
+		#"on_submit": "promotion.promotion.doctype.promotion.quotation_integration.apply_quotation_promotions",
+		#"on_cancel": "promotion.promotion.doctype.promotion.quotation_integration.remove_quotation_promotions",
+		#"after_save": "promotion.promotion.doctype.promotion.quotation_integration.apply_quotation_promotions",
+	},
+ "Sales Order": {
+        "before_save": "promotion.sales_order_hooks.copy_promotion_fields_from_quotation"
+    }
 }
 
 # Scheduled Tasks
